@@ -1,15 +1,15 @@
 <template>
 	<view>
 		<uni-collapse accordion="true" @change="changeActive">
-			<uni-collapse-item :title="order.tableNum+'号桌'" v-for="order in orderData" :key="order.id" v-if="!order.isPaid">
+			<uni-collapse-item :title="order.tableNum+'号桌'" v-for="order in activeOrder" :key="order.id">
 				<list>
-					<cell class="cell" v-for="(item, index) in order.detail" :key="item.id">
-						<text>{{item.name}}</text>
-						<uni-number-box :value="item.num" @change="changeFoodNum(item)"></uni-number-box>
-						<text>{{item.num*item.price}}元</text>
+					<cell class="order-detail" v-for="item in order.detail" :key="item.id">
+						<text class="uni-flex-item">{{item.name}}</text>
+						<uni-number-box class="uni-flex-item" :value="item.num" @change="changeDishNum($event, item)"></uni-number-box>
+						<text class="uni-flex-item">{{item.num*item.price}}元</text>
 					</cell>
 				</list>
-				<view>
+				<view class="order-control">
 					<text>总价：{{getTotalPrice(order.id)}}</text>
 					<button size="mini" type="primary">点菜</button>
 					<button size="mini" type="warn" @click="showModal(order.id)">买单</button>
@@ -32,7 +32,7 @@
 
 	import {
 		orderData
-	} from '@/data/test_data.js'
+	} from '@/common/test_data.js'
 
 	export default {
 		components: {
@@ -54,6 +54,17 @@
 				}
 			}
 		},
+		computed: {
+			activeOrder() {
+				var activeOrder = [];
+				for (var i in this.orderData) {
+					if (!this.orderData[i].isPaid) {
+						activeOrder.push(this.orderData[i]);
+					}
+				}
+				return activeOrder;
+			}
+		},
 		onLoad() {
 			this.orderData = orderData;
 		},
@@ -64,8 +75,18 @@
 				}
 			},
 
-			changeFoodNum(e, e2) {
-				console.log("e", e, e2)
+			changeDishNum(newValue, item) {
+				var detail = this.orderData[this.activeIndex].detail;
+				for (var i in detail) {
+					if (detail[i].id == item.id) {
+						break;
+					}
+				}
+				if (newValue > 0) {
+					this.orderData[this.activeIndex].detail[i].num = newValue;
+				} else {
+					this.orderData[this.activeIndex].detail.splice(i, 1);
+				}
 			},
 
 			showModal(orderId) {
@@ -100,11 +121,17 @@
 </script>
 
 <style>
-	.cell {
+	.order-detail {
 		display: flex;
 		flex-direction: row;
+		text-align: center;
 	}
-
+	
+	.order-control {
+		display: flex;
+		margin: 8px 0;
+	}
+	
 	.neworder-btn {
 		margin: 20px 30px;
 	}

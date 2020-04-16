@@ -3,11 +3,19 @@ import Vuex from "vuex";
 
 Vue.use(Vuex);
 
-const state = {};
+const state = {
+	sys_info: {}
+};
 
-const getters = {};
+const getters = {
+	sys_info: state => state.sys_info
+};
 
-const mutations = {};
+const mutations = {
+	SET_SYS_INFO(state, d) {
+		state.sys_info = d;
+	}
+};
 
 const actions = {};
 

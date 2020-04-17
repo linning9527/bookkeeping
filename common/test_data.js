@@ -15,13 +15,13 @@ const orderData = [{
 	}]
 }, {
 	id: "20200413_2",
-	tableNum: 4,
-	isPaid: false,
+	tableNum: 2,
+	isPaid: true,
 	detail: []
 }, {
 	id: "20200413_3",
 	tableNum: 3,
-	isPaid: true,
+	isPaid: false,
 	detail: []
 }]
 
@@ -33,6 +33,10 @@ const dishData = [{
 	id: "02",
 	name: "水饺",
 	price: 15,
+}, {
+	id: "03",
+	name: "盖饭",
+	price: 18,
 }]
 
 export {

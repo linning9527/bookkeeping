@@ -1,8 +1,8 @@
 <template>
 	<view>
 		<view class="order-view" :style="{height: orderHeight}">
-			<uni-collapse accordion="true" @change="changeActive">
-				<uni-collapse-item :title="order.tableNum+'号桌'" v-for="order in activeOrder" :key="order.id">
+			<uni-collapse ref="collapse" accordion="true" @change="changeActive">
+				<uni-collapse-item :title="order.tableNum+'号桌'" v-for="order in activeOrder" :key="order.id" :name="order.id">
 					<list>
 						<cell class="order-detail" v-for="item in order.detail" :key="item.id">
 							<text class="uni-flex-item">{{item.name}}</text>
@@ -14,7 +14,7 @@
 					<view class="order-control">
 						<text>总价：{{getTotalPrice(order.id)}}元</text>
 						<button size="mini">操作</button>
-						<button size="mini" type="primary">点菜</button>
+						<button size="mini" type="primary" @click="toAddDish">点菜</button>
 						<button size="mini" type="warn" @click="showModal(order.id)">买单</button>
 					</view>
 				</uni-collapse-item>
@@ -26,7 +26,8 @@
 
 		<view class="dish-view">
 			<view>当前订单号：{{selectOrderId}}:{{activeIndex}}</view>
-			<input class="dish-input" type="number" placeholder="请输入价格" />
+			<input class="dish-input" type="number" placeholder="请输入价格" @input="onInput" :focus="isInputFocus" v-model="inputValue"
+			 @blur="handleInputBlur" />
 			<list>
 				<cell class="order-detail" v-for="(item, index) in choiceDishData" :key="item.id">
 					<text class="uni-flex-item">{{item.name}}</text>
@@ -66,6 +67,8 @@
 				selectOrderId: "",
 				activeIndex: 0,
 				choiceDishData: [],
+				inputValue: "",
+				isInputFocus: false,
 			}
 		},
 		computed: {
@@ -89,10 +92,29 @@
 			this.choiceDishData = dishData;
 		},
 		methods: {
+			toAddDish() {
+				this.isInputFocus = true;
+			},
+
+			onInput(e) {
+				this.inputValue = e.target.value;
+			},
+
+			handleInputBlur(e) {
+				this.isInputFocus = false;
+			},
+
 			changeActive(arr) {
+				// arr id is wrong?need fix
 				if (arr.length > 0) {
-					this.activeIndex = arr[0];
-					this.selectOrderId = this.activeOrder[this.activeIndex].id;
+					let orderId = arr[0];
+					for (var i in this.activeOrder) {
+						if (this.activeOrder[i].id == orderId) {
+							this.activeIndex = i;
+							break;
+						}
+					}
+					this.selectOrderId = orderId;
 				}
 			},
 
@@ -166,11 +188,19 @@
 			},
 
 			addDish(index, num = 1) {
-				var newDish = this.deepCopy(this.choiceDishData[index]);
-				newDish["num"] = num;
+				if (!this.selectOrderId) {
+					uni.showToast({
+						title: '请先选择订单',
+						duration: 2000,
+						icon: "none"
+					});
+					return;
+				}
 				var orderIndex = this.orderIdToIndex(this.selectOrderId);
 				var detail = this.orderData[orderIndex].detail;
 				var find = false;
+				var newDish = this.deepCopy(this.choiceDishData[index]);
+				newDish["num"] = num;
 				for (var i in detail) {
 					if (detail[i].id == newDish.id) {
 						find = true;
@@ -189,7 +219,7 @@
 				var yyyy = now.getFullYear();
 				var mm = now.getMonth() + 1;
 				var str_mm = mm < 10 ? "0" + mm : mm.toString();
-				var dd = now.getDay();
+				var dd = now.getDate();
 				var str_dd = dd < 10 ? "0" + dd : dd.toString();
 				var index = this.orderData.length + 1;
 				var newOrder = {
@@ -200,7 +230,22 @@
 				};
 				this.orderData.push(newOrder);
 			},
-		}
+		},
+		watch: {
+			inputValue(newV, oldV) {
+				let topData = [];
+				let bottomData = [];
+				for (let i in dishData) {
+					let value = dishData[i];
+					if (value.price.toString().startsWith(newV)) {
+						topData.push(value);
+					} else {
+						bottomData.push(value);
+					}
+				}
+				this.choiceDishData = topData.concat(bottomData);
+			}
+		},
 	}
 </script>
 

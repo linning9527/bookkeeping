@@ -1,7 +1,7 @@
 <template>
 	<view>
 		<view class="order-view" :style="{height: orderHeight}">
-			<uni-collapse ref="collapse" accordion="true" @change="changeActive">
+			<uni-collapse accordion="true" @change="changeActive">
 				<uni-collapse-item :title="order.tableNum+'号桌'" v-for="order in activeOrder" :key="order.id" :name="order.id">
 					<list>
 						<cell class="order-detail" v-for="item in order.detail" :key="item.id">
@@ -12,10 +12,10 @@
 						</cell>
 					</list>
 					<view class="order-control">
-						<text>总价：{{getTotalPrice(order.id)}}元</text>
+						<text>总价：{{order.totalPrice}}元</text>
 						<button size="mini">操作</button>
 						<button size="mini" type="primary" @click="toAddDish">点菜</button>
-						<button size="mini" type="warn" @click="showModal(order.id)">买单</button>
+						<button size="mini" type="warn" @click="showModal(order.totalPrice)">买单</button>
 					</view>
 				</uni-collapse-item>
 			</uni-collapse>
@@ -105,7 +105,6 @@
 			},
 
 			changeActive(arr) {
-				// arr id is wrong?need fix
 				if (arr.length > 0) {
 					let orderId = arr[0];
 					for (var i in this.activeOrder) {
@@ -122,7 +121,8 @@
 				if (newValue == "") {
 					return;
 				}
-				var detail = this.activeOrder[this.activeIndex].detail;
+				var selectOrder = this.activeOrder[this.activeIndex];
+				var detail = selectOrder.detail;
 				for (var i in detail) {
 					if (detail[i].id == item.id) {
 						break;
@@ -133,11 +133,10 @@
 				} else {
 					detail.splice(i, 1);
 				}
+				selectOrder.totalPrice = this.getTotalPrice(detail);
 			},
 
-			showModal(orderId) {
-				this.selectOrderId = orderId;
-				var totalPrice = this.getTotalPrice(orderId);
+			showModal(totalPrice) {
 				uni.showModal({
 					title: '提示',
 					content: `确定顾客已买单？\n合计：${totalPrice}元`,
@@ -150,17 +149,16 @@
 			},
 
 			payBill() {
-				var index = this.orderIdToIndex(this.selectOrderId);
-				this.orderData[index].isPaid = true;
+				var order = this.searchOrderById(this.selectOrderId)
+				order.isPaid = true;
+				this.selectOrderId = "";
 			},
 
 			orderIdToIndex(orderId) {
 				return parseInt(orderId.split("_")[1]) - 1;
 			},
 
-			getTotalPrice(orderId) {
-				var index = this.orderIdToIndex(orderId);
-				var detail = this.orderData[index].detail;
+			getTotalPrice(detail) {
 				var totalPrice = 0;
 				detail.forEach(item => {
 					totalPrice += (item.num * item.price);
@@ -187,6 +185,15 @@
 				return copy
 			},
 
+			searchOrderById(orderId) {
+				for (var i in this.orderData) {
+					if (this.orderData[i].id == orderId) {
+						break;
+					}
+				}
+				return this.orderData[i];
+			},
+
 			addDish(index, num = 1) {
 				if (!this.selectOrderId) {
 					uni.showToast({
@@ -196,8 +203,8 @@
 					});
 					return;
 				}
-				var orderIndex = this.orderIdToIndex(this.selectOrderId);
-				var detail = this.orderData[orderIndex].detail;
+				var order = this.searchOrderById(this.selectOrderId);
+				var detail = order.detail;
 				var find = false;
 				var newDish = this.deepCopy(this.choiceDishData[index]);
 				newDish["num"] = num;
@@ -212,6 +219,7 @@
 				} else {
 					detail.push(newDish);
 				}
+				order.totalPrice = this.getTotalPrice(detail);
 			},
 
 			addNewOrder() {
@@ -226,6 +234,7 @@
 					id: `${yyyy}${str_mm}${str_dd}_${index}`,
 					tableNum: 4,
 					isPaid: false,
+					totalPrice: 0,
 					detail: []
 				};
 				this.orderData.push(newOrder);

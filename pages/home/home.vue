@@ -2,8 +2,9 @@
 	<view>
 		<view class="order-view" :style="{height: orderHeight}">
 			<uni-collapse accordion="true" @change="changeActive">
-				<uni-collapse-item :title="order.tableNum+'号桌'" v-for="order in activeOrder" :key="order.id" :name="order.id">
-					<list>
+				<uni-collapse-item :title="order.tableNum+'号桌'" v-for="(order, index) in activeOrder" :key="order.id" :name="order.id"
+				 :open="activeIndex==index">
+					<list class="order-detail-view">
 						<cell class="order-detail" v-for="item in order.detail" :key="item.id">
 							<text class="uni-flex-item">{{item.name}}</text>
 							<text class="uni-flex-item">{{item.price}}</text>
@@ -12,20 +13,17 @@
 						</cell>
 					</list>
 					<view class="order-control">
-						<text>总价：{{order.totalPrice}}元</text>
-						<button size="mini">操作</button>
-						<button size="mini" type="primary" @click="toAddDish">点菜</button>
-						<button size="mini" type="warn" @click="showModal(order.totalPrice)">买单</button>
+						<text class="order-totalprice">总价：{{order.totalPrice}}元</text>
+						<view class="btn" @click="changeTable">换座</view>
+						<view class="btn btn-dish" @click="toAddDish">点菜</view>
+						<view class="btn btn-pay" @click="showModal(order.totalPrice)">买单</view>
 					</view>
 				</uni-collapse-item>
 			</uni-collapse>
-			<view class="neworder-btn">
-				<button type="primary" plain=true @click="addNewOrder">新订单</button>
-			</view>
 		</view>
 
 		<view class="dish-view">
-			<view>当前订单号：{{selectOrderId}}:{{activeIndex}}</view>
+			<view>当前订单号：{{selectOrderId}}</view>
 			<input class="dish-input" type="number" placeholder="请输入价格" @input="onInput" :focus="isInputFocus" v-model="inputValue"
 			 @blur="handleInputBlur" />
 			<list>
@@ -37,10 +35,16 @@
 				</cell>
 			</list>
 		</view>
+
+		<uni-fab ref="fab" :pattern="pattern" :content="content" @trigger="trigger" direction="vertical"></uni-fab>
+
+		<uni-popup ref="popup" type="bottom" @change="changePopup">底部弹出 Popup</uni-popup>
 	</view>
 </template>
 
 <script>
+	import uniFab from '@/components/uni-fab/uni-fab.vue'
+	import uniPopup from "@/components/uni-popup/uni-popup.vue"
 	import uniCollapse from '@/components/uni-collapse/uni-collapse.vue'
 	import uniNumberBox from "@/components/uni-number-box/uni-number-box.vue"
 	import uniCollapseItem from '@/components/uni-collapse-item/uni-collapse-item.vue'
@@ -57,6 +61,8 @@
 
 	export default {
 		components: {
+			uniFab,
+			uniPopup,
 			uniCollapse,
 			uniNumberBox,
 			uniCollapseItem,
@@ -65,10 +71,27 @@
 			return {
 				orderData: [],
 				selectOrderId: "",
-				activeIndex: 0,
+				activeIndex: -1,
 				choiceDishData: [],
 				inputValue: "",
 				isInputFocus: false,
+				pattern: {
+					color: '#7A7E83',
+					backgroundColor: '#fff',
+					selectedColor: '#91bef0',
+					buttonColor: '#91bef0'
+				},
+				content: [{
+					iconPath: '/static/revoke.png',
+					selectedIconPath: '/static/revoke.png',
+					text: '撤销',
+					active: false
+				}, {
+					iconPath: '/static/activity_un.png',
+					selectedIconPath: '/static/activity.png',
+					text: '新订单',
+					active: false
+				}],
 			}
 		},
 		computed: {
@@ -92,6 +115,27 @@
 			this.choiceDishData = dishData;
 		},
 		methods: {
+			changePopup(e) {
+				if (e.show == true) {
+					uni.hideTabBar({});
+				} else {
+					uni.showTabBar({});
+				}
+			},
+
+			changeTable() {
+				this.$refs.popup.open();
+			},
+
+			trigger(e) {
+				this.content[e.index].active = !e.item.active;
+				if (this.content[1].active == true) {
+					this.addNewOrder();
+					this.$refs.fab.close();
+					this.content[1].active = false;
+				}
+			},
+
 			toAddDish() {
 				this.isInputFocus = true;
 			},
@@ -114,11 +158,14 @@
 						}
 					}
 					this.selectOrderId = orderId;
+				} else {
+					this.activeIndex = -1;
+					this.selectOrderId = "";
 				}
 			},
 
 			changeDishNum(newValue, item) {
-				if (newValue == "") {
+				if (newValue == "" || this.activeIndex < 0) {
 					return;
 				}
 				var selectOrder = this.activeOrder[this.activeIndex];
@@ -159,7 +206,7 @@
 			},
 
 			getTotalPrice(detail) {
-				var totalPrice = 0;
+				var totalPrice = 0.0;
 				detail.forEach(item => {
 					totalPrice += (item.num * item.price);
 				})
@@ -230,14 +277,17 @@
 				var dd = now.getDate();
 				var str_dd = dd < 10 ? "0" + dd : dd.toString();
 				var index = this.orderData.length + 1;
+				var newOrderId = `${yyyy}${str_mm}${str_dd}_${index}`;
 				var newOrder = {
-					id: `${yyyy}${str_mm}${str_dd}_${index}`,
-					tableNum: 4,
+					id: newOrderId,
+					tableNum: 0,
 					isPaid: false,
-					totalPrice: 0,
+					totalPrice: 0.0,
 					detail: []
 				};
 				this.orderData.push(newOrder);
+				this.activeIndex = this.activeOrder.length - 1;
+				this.selectOrderId = newOrderId;
 			},
 		},
 		watch: {
@@ -263,6 +313,17 @@
 		overflow: scroll;
 	}
 
+	uni-collapse-item>>>.uni-collapse-cell__title {
+		color: #007AFF;
+	}
+
+	.order-detail-view {
+		background-color: #FFFFFF;
+		padding: 9px 0;
+		border-top: solid 1px #91bef0;
+		border-bottom: solid 1px #91bef0;
+	}
+
 	.order-detail {
 		display: flex;
 		flex-direction: row;
@@ -272,11 +333,26 @@
 
 	.order-control {
 		display: flex;
-		margin: 8px 0;
+		padding: 8px 8px;
 	}
 
-	.neworder-btn {
-		margin: 20px 30px;
+	.order-totalprice {
+		font-weight: bold;
+	}
+
+	.btn {
+		padding: 0 1.3em;
+		border-radius: 5px;
+	}
+
+	.btn-dish {
+		margin-left: auto;
+		background-color: #09BB07;
+	}
+
+	.btn-pay {
+		margin-left: 2px;
+		background-color: #DD524D;
 	}
 
 	.dish-view {

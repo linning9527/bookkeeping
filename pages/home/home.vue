@@ -38,7 +38,15 @@
 
 		<uni-fab ref="fab" :pattern="pattern" :content="content" @trigger="trigger" direction="vertical"></uni-fab>
 
-		<uni-popup ref="popup" type="bottom" @change="changePopup">底部弹出 Popup</uni-popup>
+		<uni-popup ref="popup" type="bottom" @change="changePopup">
+			<view style="height: 200px;background-color: #FFFFFF;">
+				<picker-view  :value="pickerValue" style="height: 100px;">
+					<picker-view-column>
+						<view class="picker-item" v-for="(item,index) in allTable" :key="index">{{item}}号桌</view>
+					</picker-view-column>
+				</picker-view>
+			</view>
+		</uni-popup>
 	</view>
 </template>
 
@@ -52,6 +60,9 @@
 	import {
 		mapGetters
 	} from 'vuex'
+	import {
+		homePageConfig
+	} from '@/common/config.js'
 	import {
 		dishData,
 		orderData,
@@ -75,23 +86,10 @@
 				choiceDishData: [],
 				inputValue: "",
 				isInputFocus: false,
-				pattern: {
-					color: '#7A7E83',
-					backgroundColor: '#fff',
-					selectedColor: '#91bef0',
-					buttonColor: '#91bef0'
-				},
-				content: [{
-					iconPath: '/static/revoke.png',
-					selectedIconPath: '/static/revoke.png',
-					text: '撤销',
-					active: false
-				}, {
-					iconPath: '/static/activity_un.png',
-					selectedIconPath: '/static/activity.png',
-					text: '新订单',
-					active: false
-				}],
+				pattern: {},
+				content: [],
+				allTable: [1, 2, 3, 4, 5, 6],
+				pickerValue: [2],
 			}
 		},
 		computed: {
@@ -113,6 +111,8 @@
 			self = this;
 			this.orderData = orderData;
 			this.choiceDishData = dishData;
+			this.pattern = homePageConfig.fabPattern;
+			this.content = homePageConfig.fabContent;
 		},
 		methods: {
 			changePopup(e) {
@@ -363,5 +363,9 @@
 		border: 1px solid #007AFF;
 		height: 40px;
 		margin-bottom: 5px;
+	}
+
+	.picker-item {
+		text-align: center;
 	}
 </style>

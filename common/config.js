@@ -18,6 +18,11 @@ const homePageConfig = {
 	}],
 }
 
+const shopConfig = {
+	tableNum: 6,
+}
+
 export {
+	shopConfig,
 	homePageConfig,
 }

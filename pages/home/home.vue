@@ -6,15 +6,16 @@
 				 :open="activeIndex==index">
 					<list class="order-detail-view">
 						<cell class="order-detail" v-for="item in order.detail" :key="item.id">
-							<text class="uni-flex-item">{{item.name}}</text>
-							<text class="uni-flex-item">{{item.price}}</text>
+							<image class="order-image" src="../../static/activity.png"></image>
+							<text>{{ item.name }}</text>
+							<text class="uni-flex-item">{{ item.price }}</text>
 							<uni-number-box class="uni-flex-item" :value="item.num" @change="changeDishNum($event, item)"></uni-number-box>
-							<text class="uni-flex-item">{{item.num*item.price}}元</text>
+							<text class="uni-flex-item">{{ item.num*item.price }}元</text>
 						</cell>
 					</list>
 					<view class="order-control">
-						<text class="order-totalprice">总价：{{order.totalPrice}}元</text>
-						<view class="btn" @click="changeTable">换座</view>
+						<text class="order-totalprice">总价：{{ order.totalPrice }}元</text>
+						<view class="btn" @click="toChangeTable(order.tableNum)">换座</view>
 						<view class="btn btn-dish" @click="toAddDish">点菜</view>
 						<view class="btn btn-pay" @click="showModal(order.totalPrice)">买单</view>
 					</view>
@@ -23,13 +24,13 @@
 		</view>
 
 		<view class="dish-view">
-			<view>当前订单号：{{selectOrderId}}</view>
+			<view>当前订单号：{{ selectOrderId }}</view>
 			<input class="dish-input" type="number" placeholder="请输入价格" @input="onInput" :focus="isInputFocus" v-model="inputValue"
 			 @blur="handleInputBlur" />
 			<list>
 				<cell class="order-detail" v-for="(item, index) in choiceDishData" :key="item.id">
-					<text class="uni-flex-item">{{item.name}}</text>
-					<text class="uni-flex-item">{{item.price.toFixed(1)}}</text>
+					<text class="uni-flex-item">{{ item.name }}</text>
+					<text class="uni-flex-item">{{ item.price.toFixed(1) }}</text>
 					<button size="mini" type="primary" @click="addDish(index)">+1</button>
 					<button size="mini" type="primary" @click="addDish(index, 2)">+2</button>
 				</cell>
@@ -38,11 +39,18 @@
 
 		<uni-fab ref="fab" :pattern="pattern" :content="content" @trigger="trigger" direction="vertical"></uni-fab>
 
-		<uni-popup ref="popup" type="bottom" @change="changePopup">
-			<view style="height: 200px;background-color: #FFFFFF;">
-				<picker-view  :value="pickerValue" style="height: 100px;">
+		<uni-popup ref="popup" type="bottom" @change="popupChange">
+			<view class="popup-view">
+				<view class="popup-top">
+					<uni-icons class="cancel-icon" type="closeempty" size="30" color="#DD524D" @click="showPopup(false)"></uni-icons>
+					<text>{{ oldTableNum }}</text>
+					<uni-icons type="arrowthinright" size="30"></uni-icons>
+					<text>{{ newTableNum }}</text>
+					<uni-icons class="confirm-icon" type="checkmarkempty" size="30" color="#007AFF" @click="changeTable"></uni-icons>
+				</view>
+				<picker-view :value="pickerValue" class="picker-view" @change="pickerChange">
 					<picker-view-column>
-						<view class="picker-item" v-for="(item,index) in allTable" :key="index">{{item}}号桌</view>
+						<view class="picker-item" v-for="(item,index) in allTable" :key="index">{{ item }}号桌</view>
 					</picker-view-column>
 				</picker-view>
 			</view>
@@ -53,6 +61,7 @@
 <script>
 	import uniFab from '@/components/uni-fab/uni-fab.vue'
 	import uniPopup from "@/components/uni-popup/uni-popup.vue"
+	import uniIcons from "@/components/uni-icons/uni-icons.vue"
 	import uniCollapse from '@/components/uni-collapse/uni-collapse.vue'
 	import uniNumberBox from "@/components/uni-number-box/uni-number-box.vue"
 	import uniCollapseItem from '@/components/uni-collapse-item/uni-collapse-item.vue'
@@ -61,7 +70,8 @@
 		mapGetters
 	} from 'vuex'
 	import {
-		homePageConfig
+		shopConfig,
+		homePageConfig,
 	} from '@/common/config.js'
 	import {
 		dishData,
@@ -74,6 +84,7 @@
 		components: {
 			uniFab,
 			uniPopup,
+			uniIcons,
 			uniCollapse,
 			uniNumberBox,
 			uniCollapseItem,
@@ -88,8 +99,10 @@
 				isInputFocus: false,
 				pattern: {},
 				content: [],
-				allTable: [1, 2, 3, 4, 5, 6],
-				pickerValue: [2],
+				allTable: [],
+				pickerValue: [0],
+				oldTableNum: 0,
+				newTableNum: 0,
 			}
 		},
 		computed: {
@@ -113,9 +126,37 @@
 			this.choiceDishData = dishData;
 			this.pattern = homePageConfig.fabPattern;
 			this.content = homePageConfig.fabContent;
+			let allTable = [];
+			for (let i = 0; i <= shopConfig.tableNum; i++) {
+				allTable.push(i);
+			}
+			this.allTable = allTable;
 		},
 		methods: {
-			changePopup(e) {
+			changeTable() {
+				var order = this.searchOrderById(this.selectOrderId);
+				order.tableNum = this.newTableNum;
+				this.showPopup(false);
+				uni.showToast({
+					title: 'success',
+					duration: 1000,
+					icon: "none"
+				});
+			},
+
+			pickerChange(e) {
+				this.newTableNum = e.detail.value[0];
+			},
+
+			showPopup(choiceShow = true) {
+				if (choiceShow == true) {
+					this.$refs.popup.open();
+				} else {
+					this.$refs.popup.close();
+				}
+			},
+
+			popupChange(e) {
 				if (e.show == true) {
 					uni.hideTabBar({});
 				} else {
@@ -123,8 +164,10 @@
 				}
 			},
 
-			changeTable() {
-				this.$refs.popup.open();
+			toChangeTable(oldTableNum) {
+				this.pickerValue = [oldTableNum];
+				this.oldTableNum = oldTableNum;
+				this.showPopup();
 			},
 
 			trigger(e) {
@@ -331,6 +374,11 @@
 		margin-bottom: 2px;
 	}
 
+	.order-image {
+		height: 40px;
+		width: 40px;
+	}
+
 	.order-control {
 		display: flex;
 		padding: 8px 8px;
@@ -355,6 +403,7 @@
 		background-color: #DD524D;
 	}
 
+	/* 菜单列表 */
 	.dish-view {
 		padding: 0 20px;
 	}
@@ -363,6 +412,31 @@
 		border: 1px solid #007AFF;
 		height: 40px;
 		margin-bottom: 5px;
+	}
+
+	/* popup座位改变 */
+	.popup-view {
+		height: 200px;
+		background-color: #FFFFFF;
+	}
+
+	.popup-top {
+		text-align: center;
+		border-bottom: solid 1px #91bef0;
+		padding: 0 5px;
+	}
+
+	.cancel-icon {
+		float: left;
+	}
+
+	.confirm-icon {
+		float: right;
+	}
+
+	.picker-view {
+		height: 100px;
+		margin: 10px 0;
 	}
 
 	.picker-item {
